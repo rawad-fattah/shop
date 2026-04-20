@@ -8,32 +8,46 @@ const PUBLIC_API_PATHS = new Set(["/api/auth/login"]);
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (PUBLIC_API_PATHS.has(pathname)) {
-    return NextResponse.next();
-  }
+  try {
+    if (PUBLIC_API_PATHS.has(pathname)) {
+      return NextResponse.next();
+    }
 
-  const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
-  const session = token ? await verifyAuthToken(token) : null;
+    const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+    const session = token ? await verifyAuthToken(token) : null;
 
-  if (PUBLIC_PATHS.has(pathname)) {
-    if (session) {
-      return NextResponse.redirect(new URL("/", request.url));
+    if (PUBLIC_PATHS.has(pathname)) {
+      if (session) {
+        return NextResponse.redirect(new URL("/", request.url));
+      }
+
+      return NextResponse.next();
+    }
+
+    if (!session) {
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json({ message: "غير مصرح" }, { status: 401 });
+      }
+
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("next", pathname);
+      return NextResponse.redirect(loginUrl);
     }
 
     return NextResponse.next();
-  }
+  } catch (error) {
+    console.error("Proxy runtime error", error);
 
-  if (!session) {
+    if (PUBLIC_PATHS.has(pathname) || PUBLIC_API_PATHS.has(pathname)) {
+      return NextResponse.next();
+    }
+
     if (pathname.startsWith("/api/")) {
-      return NextResponse.json({ message: "غير مصرح" }, { status: 401 });
+      return NextResponse.json({ message: "حدث خطأ في المصادقة" }, { status: 500 });
     }
 
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("next", pathname);
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(new URL("/login", request.url));
   }
-
-  return NextResponse.next();
 }
 
 export const config = {
