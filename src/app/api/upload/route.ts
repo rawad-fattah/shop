@@ -7,6 +7,15 @@ import { getAuthSessionFromRequest, unauthorizedResponse } from "@/lib/auth";
 import { cloudinary, isCloudinaryConfigured } from "@/lib/cloudinary";
 
 export const runtime = "nodejs";
+const MAX_UPLOAD_SIZE_BYTES = 2 * 1024 * 1024;
+const IMGBB_API_KEY = process.env.IMGBB_API_KEY;
+
+function isServerlessProduction() {
+  return (
+    process.env.NODE_ENV === "production" &&
+    (process.env.NETLIFY === "true" || process.env.VERCEL === "1")
+  );
+}
 
 async function saveLocally(file: File) {
   const bytes = await file.arrayBuffer();
@@ -36,6 +45,40 @@ async function uploadToCloudinary(file: File) {
   return result.secure_url;
 }
 
+async function uploadToImgBB(file: File) {
+  if (!IMGBB_API_KEY) {
+    throw new Error("IMGBB_API_KEY is missing");
+  }
+
+  const bytes = await file.arrayBuffer();
+  const buffer = Buffer.from(bytes);
+  const payload = new URLSearchParams({
+    key: IMGBB_API_KEY,
+    image: buffer.toString("base64"),
+    name: file.name,
+  });
+
+  const response = await fetch("https://api.imgbb.com/1/upload", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: payload.toString(),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok || !data?.success || !data?.data?.url) {
+    throw new Error(data?.error?.message || "ImgBB upload failed");
+  }
+
+  return data.data.url as string;
+}
+
+async function fileToDataUrl(file: File) {
+  const bytes = await file.arrayBuffer();
+  const buffer = Buffer.from(bytes);
+  return `data:${file.type};base64,${buffer.toString("base64")}`;
+}
+
 export async function POST(request: NextRequest) {
   const session = await getAuthSessionFromRequest(request);
 
@@ -51,12 +94,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "ملف الصورة مطلوب" }, { status: 400 });
     }
 
+    if (!file.type.startsWith("image/")) {
+      return NextResponse.json({ message: "نوع الملف يجب أن يكون صورة" }, { status: 400 });
+    }
+
+    if (file.size > MAX_UPLOAD_SIZE_BYTES) {
+      return NextResponse.json(
+        { message: "حجم الصورة كبير جدا. الحد الاقصى 2MB" },
+        { status: 400 }
+      );
+    }
+
     const imageUrl = isCloudinaryConfigured
       ? await uploadToCloudinary(file)
-      : await saveLocally(file);
+      : IMGBB_API_KEY
+        ? await uploadToImgBB(file)
+        : isServerlessProduction()
+          ? await fileToDataUrl(file)
+          : await saveLocally(file);
 
     return NextResponse.json({ imageUrl });
   } catch (error) {
-    return NextResponse.json({ message: "فشل رفع الصورة", error }, { status: 500 });
+    const details = error instanceof Error ? error.message : "خطأ غير معروف";
+    return NextResponse.json({ message: "فشل رفع الصورة", details }, { status: 500 });
   }
 }

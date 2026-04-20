@@ -106,10 +106,11 @@ AUTH_JWT_SECRET=replace-with-a-long-random-secret
 AUTH_SEED_USERNAME=admin
 AUTH_SEED_PASSWORD=replace-with-strong-password
 
-# Optional. If empty, images are stored under /public/uploads.
+# Optional image provider (priority: Cloudinary -> ImgBB -> local/dev fallback).
 CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
+IMGBB_API_KEY=
 ```
 
 ### Create or rotate the single auth user
@@ -152,4 +153,5 @@ Then open `http://localhost:3000`.
 
 - Product images can be uploaded from file picker or camera (`capture="environment"`).
 - Cloudinary is automatically used if credentials are configured.
+- If Cloudinary is not available, set `IMGBB_API_KEY` to upload images to ImgBB.
 - CSV export can be opened in Excel/Google Sheets.
