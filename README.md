@@ -1,36 +1,155 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Shop Inventory and Sales Management
 
-## Getting Started
+Full-stack inventory, purchases, sales, dashboard, and reporting app for a shop using Next.js App Router and MongoDB.
 
-First, run the development server:
+## Authentication
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Single-user authentication only (no registration).
+- Login with username + password.
+- Password is verified using bcrypt hash comparison.
+- Credentials are stored in MongoDB (`AuthUser`) with hashed password only.
+- JWT session is stored in an HTTP-only cookie.
+- All app pages except `/login` are protected via `proxy.ts`.
+- All API routes validate authentication server-side and return `401 Unauthorized` when unauthenticated.
+- Account page allows changing credentials after confirming current password.
+
+## Tech Stack
+
+- Frontend: Next.js (App Router) + React
+- Backend: Next.js API routes
+- Database: MongoDB + Mongoose
+- Image storage: Cloudinary (optional) or local `public/uploads`
+
+## Features Implemented
+
+- Product management
+	- Categories: Dresses, Bags, Perfumes
+	- Add/Edit/Delete product
+	- Name, category, purchase price, selling price, quantity, image upload
+	- Low stock threshold + low stock alerts
+	- Search/filter products
+- Purchases
+	- Record purchased items (product, quantity, cost per item, total cost, date)
+	- Inventory auto-increases on purchase
+- Sales
+	- Record sales (product, quantity sold, selling price, total, date)
+	- Inventory auto-decreases on sale
+	- Prevent sale when stock is insufficient
+- Daily dashboard
+	- Total sales today
+	- Total profit today
+	- Items sold today
+	- List of today sales
+- Monthly reports
+	- Total revenue
+	- Total profit
+	- Best-selling products
+	- Date range filter
+- Bonus
+	- CSV export for sales report
+	- Responsive UI with sidebar navigation
+
+## Folder Structure
+
+```text
+src/
+	app/
+		api/
+			dashboard/daily/route.ts
+			products/route.ts
+			products/[id]/route.ts
+			purchases/route.ts
+			sales/route.ts
+			reports/monthly/route.ts
+			reports/export/route.ts
+			upload/route.ts
+		products/page.tsx
+		purchases/page.tsx
+		sales/page.tsx
+		reports/page.tsx
+		layout.tsx
+		page.tsx
+		globals.css
+	components/
+		forms/ProductForm.tsx
+		forms/PurchaseForm.tsx
+		forms/SaleForm.tsx
+		ProductList.tsx
+		PurchasesList.tsx
+		SalesList.tsx
+		ReportsPanel.tsx
+		Sidebar.tsx
+		StatCard.tsx
+	lib/
+		mongodb.ts
+		cloudinary.ts
+	models/
+		Product.ts
+		Purchase.ts
+		Sale.ts
+	types/
+		inventory.ts
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment Variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Copy `.env.example` to `.env.local`.
+2. Set values:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```env
+MONGODB_URI=mongodb://127.0.0.1:27017/shop_inventory
 
-## Learn More
+# Auth session secret for JWT signing
+AUTH_JWT_SECRET=replace-with-a-long-random-secret
 
-To learn more about Next.js, take a look at the following resources:
+# Seed variables used by the seed script
+AUTH_SEED_USERNAME=admin
+AUTH_SEED_PASSWORD=replace-with-strong-password
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Optional. If empty, images are stored under /public/uploads.
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Create or rotate the single auth user
 
-## Deploy on Vercel
+Run the seed command (it updates the existing user or creates one if missing):
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run seed:user
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Run Locally
+
+```bash
+npm install
+npm run dev
+```
+
+Then open `http://localhost:3000`.
+
+## Main API Endpoints
+
+- `GET /api/products` (supports `search`, `category`, `lowStock=true`)
+- `POST /api/products`
+- `GET /api/products/:id`
+- `PUT /api/products/:id`
+- `DELETE /api/products/:id`
+- `GET /api/purchases`
+- `POST /api/purchases`
+- `GET /api/sales`
+- `POST /api/sales`
+- `GET /api/dashboard/daily`
+- `GET /api/reports/monthly?start=YYYY-MM-DD&end=YYYY-MM-DD`
+- `GET /api/reports/export?start=YYYY-MM-DD&end=YYYY-MM-DD`
+- `POST /api/upload` (form-data key: `image`)
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `POST /api/auth/credentials` (change username/password)
+
+## Notes
+
+- Product images can be uploaded from file picker or camera (`capture="environment"`).
+- Cloudinary is automatically used if credentials are configured.
+- CSV export can be opened in Excel/Google Sheets.
