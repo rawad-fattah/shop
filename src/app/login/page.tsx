@@ -24,6 +24,23 @@ function LoginPageContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  async function readResponseMessage(response: Response) {
+    const contentType = response.headers.get("content-type") || "";
+
+    if (contentType.includes("application/json")) {
+      const data = await response.json();
+      return typeof data?.message === "string" ? data.message : null;
+    }
+
+    const raw = await response.text();
+
+    if (raw.trim().startsWith("<")) {
+      return "الخادم أعاد صفحة HTML بدلا من JSON. تحقق من إعدادات نشر Netlify ومسار /api/auth/login.";
+    }
+
+    return raw.slice(0, 200) || null;
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
@@ -36,10 +53,10 @@ function LoginPageContent() {
         body: JSON.stringify({ username, password }),
       });
 
-      const data = await response.json();
+      const message = await readResponseMessage(response);
 
       if (!response.ok) {
-        throw new Error(data?.message || "بيانات الدخول غير صحيحة");
+        throw new Error(message || "بيانات الدخول غير صحيحة");
       }
 
       const nextPath = getSafeRedirectPath(searchParams.get("next"));
