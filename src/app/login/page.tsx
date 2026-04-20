@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function getSafeRedirectPath(path: string | null) {
@@ -15,7 +15,7 @@ function getSafeRedirectPath(path: string | null) {
   return path;
 }
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -104,5 +104,15 @@ export default function LoginPage() {
         </form>
       </div>
     </section>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={<section className="mx-auto flex min-h-screen w-full max-w-md items-center px-4 py-8" />}
+    >
+      <LoginPageContent />
+    </Suspense>
   );
 }
