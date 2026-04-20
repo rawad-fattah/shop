@@ -1,11 +1,11 @@
 import bcrypt from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
 
+import { getConfiguredCredentials } from "@/lib/auth-credentials";
 import {
   AUTH_COOKIE_NAME,
   createAuthToken,
   getAuthCookieOptions,
-  getConfiguredCredentials,
 } from "@/lib/auth";
 
 export const runtime = "nodejs";

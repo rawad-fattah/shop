@@ -1,9 +1,6 @@
 import { jwtVerify, SignJWT } from "jose";
 import { NextRequest, NextResponse } from "next/server";
 
-import { connectToDatabase } from "@/lib/mongodb";
-import AuthUser from "@/models/AuthUser";
-
 export const AUTH_COOKIE_NAME = "shop_auth";
 
 const AUTH_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
@@ -27,27 +24,7 @@ function getJwtSecret() {
   return new TextEncoder().encode(secret);
 }
 
-async function getMongoCredentials(): Promise<AuthCredentials | null> {
-  await connectToDatabase();
-
-  const user = await AuthUser.findOne({ isActive: true })
-    .sort({ updatedAt: -1 })
-    .select("username passwordHash")
-    .lean();
-
-  if (!user?.username || !user?.passwordHash) {
-    return null;
-  }
-
-  return {
-    username: user.username,
-    passwordHash: user.passwordHash,
-  };
-}
-
-export async function getConfiguredCredentials() {
-  return getMongoCredentials();
-}
+export type { AuthCredentials };
 
 export async function createAuthToken(username: string) {
   return new SignJWT({ username })
