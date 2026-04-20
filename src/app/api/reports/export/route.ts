@@ -49,9 +49,12 @@ export async function GET(request: NextRequest) {
       ];
     });
 
-    const csv = [header, ...rows]
+    const csvBody = [header, ...rows]
       .map((line) => line.map((value) => `"${value.replace(/"/g, '""')}"`).join(","))
-      .join("\n");
+      .join("\r\n");
+
+    // Add UTF-8 BOM so Excel can decode Arabic headers correctly.
+    const csv = `\uFEFF${csvBody}`;
 
     return new NextResponse(csv, {
       status: 200,
