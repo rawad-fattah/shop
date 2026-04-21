@@ -12,6 +12,10 @@ function getErrorDetails(error: unknown) {
   return "خطأ غير معروف في الخادم";
 }
 
+function normalizeProductName(value: unknown) {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
 export async function GET(request: NextRequest) {
   const session = await getAuthSessionFromRequest(request);
 
@@ -65,11 +69,16 @@ export async function POST(request: NextRequest) {
     await connectToDatabase();
 
     const body = await request.json();
+    const normalizedName = normalizeProductName(body.name);
 
     const purchasePrice = Number(body.purchasePrice);
     const sellingPrice = Number(body.sellingPrice);
     const quantity = Number(body.quantity);
     const lowStockThreshold = Number(body.lowStockThreshold ?? 5);
+
+    if (!normalizedName) {
+      return NextResponse.json({ message: "اسم المنتج مطلوب" }, { status: 400 });
+    }
 
     if (!Number.isFinite(purchasePrice) || !Number.isFinite(sellingPrice)) {
       return NextResponse.json(
@@ -85,8 +94,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const duplicate = await Product.findOne({
+      name: { $regex: `^${normalizedName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" },
+    })
+      .select("_id")
+      .lean();
+
+    if (duplicate) {
+      return NextResponse.json({ message: "يوجد منتج بنفس الاسم بالفعل" }, { status: 409 });
+    }
+
     const product = await Product.create({
-      name: body.name,
+      name: String(body.name).trim(),
       category: body.category,
       purchasePrice,
       sellingPrice,

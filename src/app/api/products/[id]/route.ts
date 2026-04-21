@@ -8,6 +8,10 @@ type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
+function normalizeProductName(value: unknown) {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
 export async function GET(request: NextRequest, context: RouteContext) {
   const session = await getAuthSessionFromRequest(request);
 
@@ -45,11 +49,27 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     await connectToDatabase();
     const { id } = await context.params;
     const body = await request.json();
+    const normalizedName = normalizeProductName(body.name);
+
+    if (!normalizedName) {
+      return NextResponse.json({ message: "اسم المنتج مطلوب" }, { status: 400 });
+    }
+
+    const duplicate = await Product.findOne({
+      _id: { $ne: id },
+      name: { $regex: `^${normalizedName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" },
+    })
+      .select("_id")
+      .lean();
+
+    if (duplicate) {
+      return NextResponse.json({ message: "يوجد منتج بنفس الاسم بالفعل" }, { status: 409 });
+    }
 
     const product = await Product.findByIdAndUpdate(
       id,
       {
-        name: body.name,
+        name: String(body.name).trim(),
         category: body.category,
         purchasePrice: Number(body.purchasePrice),
         sellingPrice: Number(body.sellingPrice),
