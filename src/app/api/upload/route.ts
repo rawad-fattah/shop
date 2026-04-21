@@ -10,6 +10,24 @@ export const runtime = "nodejs";
 const MAX_UPLOAD_SIZE_BYTES = 2 * 1024 * 1024;
 const IMGBB_API_KEY = process.env.IMGBB_API_KEY;
 
+function toSafeFileName(fileName: string) {
+  const dotIndex = fileName.lastIndexOf(".");
+  const rawBase = dotIndex > 0 ? fileName.slice(0, dotIndex) : fileName;
+  const rawExt = dotIndex > 0 ? fileName.slice(dotIndex + 1) : "jpg";
+
+  const safeBase = rawBase
+    .normalize("NFKC")
+    .replace(/[^a-zA-Z0-9-_]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "") || "image";
+
+  const safeExt = rawExt
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "") || "jpg";
+
+  return `${safeBase}.${safeExt}`;
+}
+
 function isServerlessProduction() {
   return (
     process.env.NODE_ENV === "production" &&
@@ -55,7 +73,7 @@ async function uploadToImgBB(file: File) {
   const payload = new URLSearchParams({
     key: IMGBB_API_KEY,
     image: buffer.toString("base64"),
-    name: file.name,
+    name: toSafeFileName(file.name),
   });
 
   const response = await fetch("https://api.imgbb.com/1/upload", {

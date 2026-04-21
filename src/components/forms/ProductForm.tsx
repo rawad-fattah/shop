@@ -29,10 +29,21 @@ type ProductPayload = {
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const MAX_IMAGE_DIMENSION = 2000;
 
-function buildJpegName(originalName: string) {
+function buildSafeBaseName(originalName: string) {
   const dotIndex = originalName.lastIndexOf(".");
   const baseName = dotIndex > 0 ? originalName.slice(0, dotIndex) : originalName;
-  return `${baseName || "image"}.jpg`;
+  const cleaned = baseName
+    .normalize("NFKC")
+    .replace(/[\\/:*?"<>|\u0000-\u001F]/g, "-")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  return cleaned || "image";
+}
+
+function buildJpegName(originalName: string) {
+  return `${buildSafeBaseName(originalName)}.jpg`;
 }
 
 function readImage(url: string): Promise<HTMLImageElement> {
@@ -61,9 +72,14 @@ function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number):
   });
 }
 
-async function compressImageFile(file: File): Promise<File> {
+type CompressedImagePayload = {
+  blob: Blob;
+  filename: string;
+};
+
+async function compressImageFile(file: File): Promise<CompressedImagePayload> {
   if (file.size <= MAX_IMAGE_BYTES) {
-    return file;
+    return { blob: file, filename: buildJpegName(file.name) };
   }
 
   const objectUrl = URL.createObjectURL(file);
@@ -96,10 +112,10 @@ async function compressImageFile(file: File): Promise<File> {
         }
 
         if (blob.size <= MAX_IMAGE_BYTES) {
-          return new File([blob], buildJpegName(file.name), {
-            type: "image/jpeg",
-            lastModified: Date.now(),
-          });
+          return {
+            blob,
+            filename: buildJpegName(file.name),
+          };
         }
       }
 
@@ -108,10 +124,10 @@ async function compressImageFile(file: File): Promise<File> {
     }
 
     if (smallestBlob && smallestBlob.size <= MAX_IMAGE_BYTES) {
-      return new File([smallestBlob], buildJpegName(file.name), {
-        type: "image/jpeg",
-        lastModified: Date.now(),
-      });
+      return {
+        blob: smallestBlob,
+        filename: buildJpegName(file.name),
+      };
     }
 
     throw new Error("تعذر ضغط الصورة إلى أقل من 2MB. اختر صورة أصغر.");
@@ -169,7 +185,7 @@ export default function ProductForm({ initial, onSuccess, onCancelEdit }: Produc
       const compressedFile = await compressImageFile(file);
 
       const formData = new FormData();
-      formData.append("image", compressedFile);
+      formData.append("image", compressedFile.blob, compressedFile.filename);
 
       const response = await fetch("/api/upload", {
         method: "POST",
