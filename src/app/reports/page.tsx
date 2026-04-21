@@ -8,6 +8,17 @@ import { type MonthlyReportResponse } from "@/types/inventory";
 
 export default function ReportsPage() {
   const [report, setReport] = useState<MonthlyReportResponse | null>(null);
+  const [selectedStart, setSelectedStart] = useState("");
+  const [selectedEnd, setSelectedEnd] = useState("");
+
+  const exportParams = new URLSearchParams();
+  if (selectedStart) {
+    exportParams.set("start", selectedStart);
+  }
+  if (selectedEnd) {
+    exportParams.set("end", selectedEnd);
+  }
+  const exportHref = `/api/reports/export${exportParams.toString() ? `?${exportParams.toString()}` : ""}`;
 
   function normalizeReportResponse(data: unknown): MonthlyReportResponse {
     const payload = (data && typeof data === "object" ? data : {}) as Record<string, unknown>;
@@ -82,7 +93,7 @@ export default function ReportsPage() {
         </div>
 
         <a
-          href="/api/reports/export"
+          href={exportHref}
           className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
         >
           تصدير CSV
@@ -92,6 +103,8 @@ export default function ReportsPage() {
       <ReportsPanel
         report={report}
         onFilter={(start, end) => {
+          setSelectedStart(start);
+          setSelectedEnd(end);
           void loadReport(start, end);
         }}
       />
