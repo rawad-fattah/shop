@@ -26,6 +26,100 @@ type ProductPayload = {
   imageUrl: string;
 };
 
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+const MAX_IMAGE_DIMENSION = 2000;
+
+function buildJpegName(originalName: string) {
+  const dotIndex = originalName.lastIndexOf(".");
+  const baseName = dotIndex > 0 ? originalName.slice(0, dotIndex) : originalName;
+  return `${baseName || "image"}.jpg`;
+}
+
+function readImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("تعذر قراءة الصورة"));
+    image.src = url;
+  });
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error("تعذر ضغط الصورة"));
+          return;
+        }
+
+        resolve(blob);
+      },
+      type,
+      quality
+    );
+  });
+}
+
+async function compressImageFile(file: File): Promise<File> {
+  if (file.size <= MAX_IMAGE_BYTES) {
+    return file;
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await readImage(objectUrl);
+    const ratio = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(image.width, image.height));
+
+    let targetWidth = Math.max(1, Math.round(image.width * ratio));
+    let targetHeight = Math.max(1, Math.round(image.height * ratio));
+    let smallestBlob: Blob | null = null;
+
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const canvas = document.createElement("canvas");
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+
+      const context = canvas.getContext("2d");
+      if (!context) {
+        throw new Error("تعذر معالجة الصورة");
+      }
+
+      context.drawImage(image, 0, 0, targetWidth, targetHeight);
+
+      for (const quality of [0.9, 0.8, 0.7, 0.6, 0.5]) {
+        const blob = await canvasToBlob(canvas, "image/jpeg", quality);
+
+        if (!smallestBlob || blob.size < smallestBlob.size) {
+          smallestBlob = blob;
+        }
+
+        if (blob.size <= MAX_IMAGE_BYTES) {
+          return new File([blob], buildJpegName(file.name), {
+            type: "image/jpeg",
+            lastModified: Date.now(),
+          });
+        }
+      }
+
+      targetWidth = Math.max(300, Math.round(targetWidth * 0.85));
+      targetHeight = Math.max(300, Math.round(targetHeight * 0.85));
+    }
+
+    if (smallestBlob && smallestBlob.size <= MAX_IMAGE_BYTES) {
+      return new File([smallestBlob], buildJpegName(file.name), {
+        type: "image/jpeg",
+        lastModified: Date.now(),
+      });
+    }
+
+    throw new Error("تعذر ضغط الصورة إلى أقل من 2MB. اختر صورة أصغر.");
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 function emptyPayload(): ProductPayload {
   return {
     name: "",
@@ -54,6 +148,7 @@ export default function ProductForm({ initial, onSuccess, onCancelEdit }: Produc
   const [payload, setPayload] = useState<ProductPayload>(
     initial ? payloadFromProduct(initial) : emptyPayload()
   );
+  const [processingImage, setProcessingImage] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,11 +162,14 @@ export default function ProductForm({ initial, onSuccess, onCancelEdit }: Produc
 
   async function handleImageUpload(file: File) {
     setUploading(true);
+    setProcessingImage(true);
     setError(null);
 
     try {
+      const compressedFile = await compressImageFile(file);
+
       const formData = new FormData();
-      formData.append("image", file);
+      formData.append("image", compressedFile);
 
       const response = await fetch("/api/upload", {
         method: "POST",
@@ -88,6 +186,7 @@ export default function ProductForm({ initial, onSuccess, onCancelEdit }: Produc
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "فشل رفع الصورة");
     } finally {
+      setProcessingImage(false);
       setUploading(false);
     }
   }
@@ -249,6 +348,9 @@ export default function ProductForm({ initial, onSuccess, onCancelEdit }: Produc
           }}
           className="mt-2 block w-full text-sm"
         />
+        {processingImage && (
+          <p className="mt-2 text-xs text-slate-500">جار تجهيز الصورة قبل الرفع...</p>
+        )}
         {uploading && <p className="mt-2 text-xs text-slate-500">جار رفع الصورة...</p>}
         {previewUrl && (
           <img
