@@ -9,6 +9,29 @@ type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
+export async function GET(request: NextRequest, context: RouteContext) {
+  const session = await getAuthSessionFromRequest(request);
+
+  if (!session) {
+    return unauthorizedResponse();
+  }
+
+  try {
+    await connectToDatabase();
+    const { id } = await context.params;
+
+    const sale = await Sale.findById(id).populate("product", "name category");
+
+    if (!sale) {
+      return NextResponse.json({ message: "عملية البيع غير موجودة" }, { status: 404 });
+    }
+
+    return NextResponse.json(sale);
+  } catch (error) {
+    return NextResponse.json({ message: "فشل جلب الفاتورة", error }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: NextRequest, context: RouteContext) {
   const session = await getAuthSessionFromRequest(request);
 

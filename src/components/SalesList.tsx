@@ -4,6 +4,7 @@ type SalesListProps = {
   sales: Sale[];
   compact?: boolean;
   onDeleteSale?: (saleId: string) => void | Promise<void>;
+  onPrintSale?: (saleId: string) => void;
   deletingSaleId?: string | null;
 };
 
@@ -19,9 +20,10 @@ export default function SalesList({
   sales,
   compact = false,
   onDeleteSale,
+  onPrintSale,
   deletingSaleId = null,
 }: SalesListProps) {
-  const showActions = !compact && !!onDeleteSale;
+  const showActions = !compact && (!!onDeleteSale || !!onPrintSale);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
@@ -58,14 +60,28 @@ export default function SalesList({
                 </td>
                 {showActions && (
                   <td className="px-4 py-3">
-                    <button
-                      type="button"
-                      onClick={() => void onDeleteSale?.(sale._id)}
-                      disabled={deletingSaleId === sale._id}
-                      className="rounded-lg border border-rose-300 px-3 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-60"
-                    >
-                      {deletingSaleId === sale._id ? "جار الحذف..." : "حذف"}
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {onPrintSale && (
+                        <button
+                          type="button"
+                          onClick={() => onPrintSale(sale._id)}
+                          className="rounded-lg border border-sky-300 px-3 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-50"
+                        >
+                          طباعة فاتورة
+                        </button>
+                      )}
+
+                      {onDeleteSale && (
+                        <button
+                          type="button"
+                          onClick={() => void onDeleteSale(sale._id)}
+                          disabled={deletingSaleId === sale._id}
+                          className="rounded-lg border border-rose-300 px-3 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-60"
+                        >
+                          {deletingSaleId === sale._id ? "جار الحذف..." : "حذف"}
+                        </button>
+                      )}
+                    </div>
                   </td>
                 )}
               </tr>

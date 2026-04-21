@@ -58,6 +58,10 @@ export default function SalesPage() {
     }
   }
 
+  function printSaleInvoice(saleId: string) {
+    window.open(`/invoice/${saleId}`, "_blank", "noopener,noreferrer");
+  }
+
   return (
     <section className="space-y-5">
       <div>
@@ -85,7 +89,12 @@ export default function SalesPage() {
         }}
       />
 
-      <SalesList sales={sales} onDeleteSale={deleteSale} deletingSaleId={deletingSaleId} />
+      <SalesList
+        sales={sales}
+        onPrintSale={printSaleInvoice}
+        onDeleteSale={deleteSale}
+        deletingSaleId={deletingSaleId}
+      />
     </section>
   );
 }
