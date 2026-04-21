@@ -37,8 +37,8 @@ export default function Sidebar() {
   return (
     <aside className="w-full md:w-72 md:min-h-screen bg-slate-950 text-slate-100 px-4 py-6 md:sticky md:top-0">
       <div className="mb-8 px-2">
-        <p className="text-xs uppercase tracking-[0.2em] text-amber-300">متجر</p>
-        <h1 className="text-2xl font-black mt-2">إدارة المخزون</h1>
+        <p className="sidebar-shop-kicker">Store</p>
+        <h1 className="sidebar-shop-title">Marvella خان الصابون</h1>
       </div>
 
       <nav className="grid grid-cols-2 gap-2 md:grid-cols-1">
