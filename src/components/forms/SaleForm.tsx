@@ -66,57 +66,81 @@ export default function SaleForm({ products, onSuccess }: SaleFormProps) {
       <h2 className="text-lg font-bold text-slate-900">تسجيل بيع</h2>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <select
-          value={productId}
-          onChange={(event) => {
-            const id = event.target.value;
-            setProductId(id);
-            const product = products.find((item) => item._id === id);
-            if (product) {
-              setSellingPrice(product.sellingPrice);
-            }
-          }}
-          className="rounded-xl border border-slate-300 px-3 py-2 sm:col-span-2"
-          required
-          disabled={!products.length}
-        >
-          {products.length === 0 && <option value="">لا توجد منتجات متاحة</option>}
-          {products.map((product) => (
-            <option key={product._id} value={product._id}>
-              {product.name} ({product.quantity} في المخزون)
-            </option>
-          ))}
-        </select>
+        <div className="sm:col-span-2">
+          <label htmlFor="sale-product" className="mb-1 block text-sm font-semibold text-slate-700">
+            المنتج
+          </label>
+          <select
+            id="sale-product"
+            value={productId}
+            onChange={(event) => {
+              const id = event.target.value;
+              setProductId(id);
+              const product = products.find((item) => item._id === id);
+              if (product) {
+                setSellingPrice(product.sellingPrice);
+              }
+            }}
+            className="w-full rounded-xl border border-slate-300 px-3 py-2 sm:col-span-2"
+            required
+            disabled={!products.length}
+          >
+            {products.length === 0 && <option value="">لا توجد منتجات متاحة</option>}
+            {products.map((product) => (
+              <option key={product._id} value={product._id}>
+                {product.name} ({product.quantity} في المخزون)
+              </option>
+            ))}
+          </select>
+        </div>
 
-        <input
-          type="number"
-          min={1}
-          max={selectedProduct?.quantity || undefined}
-          value={quantitySold}
-          onChange={(event) => setQuantitySold(Number(event.target.value))}
-          className="rounded-xl border border-slate-300 px-3 py-2"
-          placeholder="الكمية المباعة"
-          required
-        />
+        <div>
+          <label htmlFor="sale-quantity" className="mb-1 block text-sm font-semibold text-slate-700">
+            الكمية المباعة
+          </label>
+          <input
+            id="sale-quantity"
+            type="number"
+            min={1}
+            max={selectedProduct?.quantity || undefined}
+            value={quantitySold}
+            onChange={(event) => setQuantitySold(Number(event.target.value))}
+            className="w-full rounded-xl border border-slate-300 px-3 py-2"
+            placeholder="الكمية المباعة"
+            required
+          />
+        </div>
 
-        <input
-          type="number"
-          min={0}
-          step="0.01"
-          value={sellingPrice}
-          onChange={(event) => setSellingPrice(Number(event.target.value))}
-          className="rounded-xl border border-slate-300 px-3 py-2"
-          placeholder="سعر البيع"
-          required
-        />
+        <div>
+          <label htmlFor="sale-price" className="mb-1 block text-sm font-semibold text-slate-700">
+            سعر البيع
+          </label>
+          <input
+            id="sale-price"
+            type="number"
+            min={0}
+            step="0.01"
+            value={sellingPrice}
+            onChange={(event) => setSellingPrice(Number(event.target.value))}
+            className="w-full rounded-xl border border-slate-300 px-3 py-2"
+            placeholder="سعر البيع"
+            required
+          />
+        </div>
 
-        <input
-          type="date"
-          value={date}
-          onChange={(event) => setDate(event.target.value)}
-          className="rounded-xl border border-slate-300 px-3 py-2"
-          required
-        />
+        <div>
+          <label htmlFor="sale-date" className="mb-1 block text-sm font-semibold text-slate-700">
+            التاريخ
+          </label>
+          <input
+            id="sale-date"
+            type="date"
+            value={date}
+            onChange={(event) => setDate(event.target.value)}
+            className="w-full rounded-xl border border-slate-300 px-3 py-2"
+            required
+          />
+        </div>
       </div>
 
       {error && <p className="mt-3 text-sm text-rose-600">{error}</p>}
