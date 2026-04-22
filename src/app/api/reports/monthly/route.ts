@@ -32,12 +32,12 @@ export async function GET(request: NextRequest) {
 
     const sales = await Sale.find({
       date: { $gte: start, $lt: end },
-    }).populate("product", "name category");
+    });
 
     const totals = sales.reduce(
       (acc, sale) => {
-        acc.revenue += sale.totalPrice;
-        acc.profit += sale.profit;
+        acc.revenue += Number(sale.totalAmount || 0);
+        acc.profit += Number(sale.totalProfit || 0);
         return acc;
       },
       { revenue: 0, profit: 0 }
@@ -49,19 +49,20 @@ export async function GET(request: NextRequest) {
     >();
 
     for (const sale of sales) {
-      const populated = sale.product as { _id?: string; id?: string; name?: string } | null;
-      const productId = populated?._id?.toString() || populated?.id || "غير_معروف";
-      const name = populated?.name || "منتج غير معروف";
-      const current = bestSellingMap.get(productId) || {
-        productId,
-        name,
-        quantity: 0,
-        revenue: 0,
-      };
+      for (const item of sale.items || []) {
+        const productId = item.productId?.toString() || item.name || "غير_معروف";
+        const name = item.name || "منتج غير معروف";
+        const current = bestSellingMap.get(productId) || {
+          productId,
+          name,
+          quantity: 0,
+          revenue: 0,
+        };
 
-      current.quantity += sale.quantitySold;
-      current.revenue += sale.totalPrice;
-      bestSellingMap.set(productId, current);
+        current.quantity += item.quantity;
+        current.revenue += item.total;
+        bestSellingMap.set(productId, current);
+      }
     }
 
     const bestSellingProducts = Array.from(bestSellingMap.values())

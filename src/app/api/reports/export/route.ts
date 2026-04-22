@@ -22,9 +22,7 @@ export async function GET(request: NextRequest) {
 
     const sales = await Sale.find({
       date: { $gte: start, $lte: end },
-    })
-      .populate("product", "name category")
-      .sort({ date: 1 });
+    }).sort({ date: 1 });
 
     const header = [
       "التاريخ",
@@ -36,21 +34,29 @@ export async function GET(request: NextRequest) {
       "الربح",
     ];
 
-    const rows = sales.map((sale) => {
-      const product = sale.product as { name?: string; category?: string } | null;
-      return [
+    const rows = sales.flatMap((sale) =>
+      (sale.items || []).map((item: {
+        name?: string;
+        category?: string;
+        quantity: number;
+        price: number;
+        total: number;
+        profit: number;
+      }) => [
         new Date(sale.date).toISOString(),
-        product?.name || "غير معروف",
-        product?.category || "غير معروف",
-        String(sale.quantitySold),
-        String(sale.sellingPrice),
-        String(sale.totalPrice),
-        String(sale.profit),
-      ];
-    });
+        item.name || "غير معروف",
+        item.category || "غير معروف",
+        String(item.quantity),
+        String(item.price),
+        String(item.total),
+        String(item.profit),
+      ])
+    );
 
     const csvBody = [header, ...rows]
-      .map((line) => line.map((value) => `"${value.replace(/"/g, '""')}"`).join(","))
+      .map((line: string[]) =>
+        line.map((value: string) => `"${value.replace(/"/g, '""')}"`).join(",")
+      )
       .join("\r\n");
 
     // Add UTF-8 BOM so Excel can decode Arabic headers correctly.

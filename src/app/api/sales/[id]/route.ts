@@ -20,7 +20,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     await connectToDatabase();
     const { id } = await context.params;
 
-    const sale = await Sale.findById(id).populate("product", "name category");
+    const sale = await Sale.findById(id);
 
     if (!sale) {
       return NextResponse.json({ message: "عملية البيع غير موجودة" }, { status: 404 });
@@ -49,10 +49,24 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ message: "عملية البيع غير موجودة" }, { status: 404 });
     }
 
-    const product = await Product.findById(sale.product);
+    const productRestoreMap = new Map<string, number>();
 
-    if (product) {
-      product.quantity += sale.quantitySold;
+    for (const item of sale.items || []) {
+      const productId = item.productId?.toString();
+      if (!productId) {
+        continue;
+      }
+
+      const current = productRestoreMap.get(productId) || 0;
+      productRestoreMap.set(productId, current + item.quantity);
+    }
+
+    const restoreIds = Array.from(productRestoreMap.keys());
+    const products = await Product.find({ _id: { $in: restoreIds } });
+
+    for (const product of products) {
+      const restoreQty = productRestoreMap.get(product._id.toString()) || 0;
+      product.quantity += restoreQty;
       await product.save();
     }
 

@@ -15,11 +15,18 @@ export type Product = {
 
 export type Sale = {
   _id: string;
-  product: { _id: string; name: string; category: Category } | string | null;
-  quantitySold: number;
-  sellingPrice: number;
-  totalPrice: number;
-  profit: number;
+  items: Array<{
+    productId: string;
+    name: string;
+    category: string;
+    quantity: number;
+    price: number;
+    total: number;
+    profit: number;
+  }>;
+  totalAmount: number;
+  totalProfit: number;
+  totalQuantity: number;
   date: string;
 };
 

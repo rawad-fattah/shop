@@ -34,15 +34,13 @@ export async function GET(request: NextRequest) {
 
     const sales = await Sale.find({
       date: { $gte: start, $lt: end },
-    })
-      .populate("product", "name category")
-      .sort({ date: -1 });
+    }).sort({ date: -1 });
 
     const totals = sales.reduce(
       (acc, sale) => {
-        acc.totalSales += sale.totalPrice;
-        acc.totalProfit += sale.profit;
-        acc.itemsSold += sale.quantitySold;
+        acc.totalSales += Number(sale.totalAmount || 0);
+        acc.totalProfit += Number(sale.totalProfit || 0);
+        acc.itemsSold += Number(sale.totalQuantity || 0);
         return acc;
       },
       { totalSales: 0, totalProfit: 0, itemsSold: 0 }

@@ -10,23 +10,8 @@ function formatDate(value: string) {
   return new Date(value).toLocaleDateString("en-GB");
 }
 
-function getProductName(sale: Sale) {
-  if (!sale.product) {
-    return "منتج محذوف";
-  }
-
-  return typeof sale.product === "string" ? sale.product : sale.product.name;
-}
-
-function getProductCategory(sale: Sale) {
-  if (!sale.product || typeof sale.product === "string") {
-    return "غير معروف";
-  }
-
-  return sale.product.category;
-}
-
 export default function Invoice({ sale, shopName = "Marvella خان الصابون", title = "Invoice" }: InvoiceProps) {
+  const items = Array.isArray(sale.items) ? sale.items : [];
   const billNo = sale._id.slice(-8).toUpperCase();
 
   return (
@@ -51,20 +36,20 @@ export default function Invoice({ sale, shopName = "Marvella خان الصابو
           <thead>
             <tr>
               <th className="px-1 py-1">المنتج</th>
-              <th className="px-1 py-1">التصنيف</th>
               <th className="px-1 py-1">QTY</th>
               <th className="px-1 py-1">السعر</th>
               <th className="px-1 py-1">الإجمالي</th>
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td className="px-1 py-1 font-medium break-words">{getProductName(sale)}</td>
-              <td className="px-1 py-1">{getProductCategory(sale)}</td>
-              <td className="px-1 py-1">{sale.quantitySold}</td>
-              <td className="px-1 py-1">${sale.sellingPrice.toFixed(2)}</td>
-              <td className="px-1 py-1">${sale.totalPrice.toFixed(2)}</td>
-            </tr>
+            {items.map((item, index) => (
+              <tr key={`${item.productId}-${index}`}>
+                <td className="px-1 py-1 font-medium break-words">{item.name}</td>
+                <td className="px-1 py-1">{item.quantity}</td>
+                <td className="px-1 py-1">${item.price.toFixed(2)}</td>
+                <td className="px-1 py-1">${item.total.toFixed(2)}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </section>
@@ -73,13 +58,13 @@ export default function Invoice({ sale, shopName = "Marvella خان الصابو
 
       <div className="invoice-thermal-meta mt-2 flex items-center justify-between">
         <p>SubTotal</p>
-        <p>{sale.quantitySold}</p>
-        <p>${sale.totalPrice.toFixed(2)}</p>
+        <p>{sale.totalQuantity}</p>
+        <p>${sale.totalAmount.toFixed(2)}</p>
       </div>
 
       <footer className="invoice-thermal-total mt-2 flex items-center justify-between pt-2">
         <span>TOTAL</span>
-        <span>${sale.totalPrice.toFixed(2)}</span>
+        <span>${sale.totalAmount.toFixed(2)}</span>
       </footer>
 
       <p className="invoice-thermal-thanks mt-3 text-center">شكرا لزيارتكم</p>
